@@ -19,7 +19,7 @@ function ForgotPassword(){
   try{
 
    const res = await axios.post(
-    "http://localhost:5050/api/auth/forgot-password",
+    "https://marketnest-goea.onrender.com/api/products",
     {
      email,
      newPassword:password

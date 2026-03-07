@@ -17,7 +17,7 @@ function ProductDetails(){
  const fetchProduct = async ()=>{
 
   const res = await axios.get(
-   `http://localhost:5050/api/products/${id}`
+   `https://marketnest-goea.onrender.com/api/products${id}`
   );
 
   setProduct(res.data);

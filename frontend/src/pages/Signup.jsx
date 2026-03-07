@@ -30,7 +30,7 @@ function Signup(){
   try{
 
    await axios.post(
-    "http://localhost:5050/api/auth/signup",
+    "https://marketnest-goea.onrender.com/api/products",
     {name,email,password,role}
    );
 

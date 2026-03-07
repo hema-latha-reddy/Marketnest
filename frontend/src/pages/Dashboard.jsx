@@ -223,7 +223,7 @@ Add Product
 
 {p.images && p.images.length>0 && (
  <img
-  src={`http://localhost:5050/${p.images[0]}`}
+  src={`https://marketnest-goea.onrender.com/api/products${p.images[0]}`}
   alt="product"
   style={{
    width:"100%",

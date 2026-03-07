@@ -15,7 +15,7 @@ function Login(){
   try{
 
    const res = await axios.post(
-    "http://localhost:5050/api/auth/login",
+    "https://marketnest-goea.onrender.com/api/products",
     { email,password }
    );
 
