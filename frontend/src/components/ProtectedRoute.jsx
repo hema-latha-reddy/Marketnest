@@ -1,19 +1,32 @@
-import { Navigate } from "react-router-dom";
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-function ProtectedRoute({ children, roleRequired }) {
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading } = useAuth();
 
- const token = localStorage.getItem("token");
- const role = localStorage.getItem("role");
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
- if (!token) {
-  return <Navigate to="/" />;
- }
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
 
- if (roleRequired && role !== roleRequired) {
-  return <Navigate to="/marketplace" />;
- }
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user.role)) {
+      if (user.role === 'brand') {
+        return <Navigate to="/dashboard" />;
+      } else {
+        return <Navigate to="/marketplace" />;
+      }
+    }
+  }
 
- return children;
-}
+  return children;
+};
 
 export default ProtectedRoute;

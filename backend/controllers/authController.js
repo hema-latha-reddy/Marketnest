@@ -1,189 +1,139 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-
-// =====================
-// SIGNUP
-// =====================
-
-exports.signup = async (req,res)=>{
-
-  try{
- 
-   const {name,email,password,role} = req.body;
- 
-   const existingUser = await User.findOne({email});
- 
-   if(existingUser){
-    return res.status(400).json({
-     message:"User already exists"
-    });
-   }
- 
-   const hashedPassword = await bcrypt.hash(password,10);
- 
-   const user = await User.create({
-    name,
-    email,
-    password:hashedPassword,
-    role
-   });
- 
-   res.json({
-    message:"Account created successfully"
-   });
- 
-  }catch(err){
- 
-   res.status(500).json({
-    message:"Signup failed"
-   });
- 
-  }
- 
- };
-
-
-
-// =====================
-// LOGIN
-// =====================
-
-exports.login = async (req,res)=>{
-
-  try{
- 
-   const {email,password} = req.body;
- 
-   const user = await User.findOne({email});
- 
-   if(!user){
-    return res.status(400).json({
-     message:"Invalid credentials"
-    });
-   }
- 
-   const isMatch = await bcrypt.compare(password,user.password);
- 
-   if(!isMatch){
-    return res.status(400).json({
-     message:"Invalid credentials"
-    });
-   }
- 
-   const token = jwt.sign(
-    {
-     id:user._id,
-     role:user.role
-    },
-    process.env.JWT_SECRET,
-    {expiresIn:"1d"}
-   );
- 
-   res.json({
-    token,
-    user:{
-     id:user._id,
-     role:user.role,
-     name:user.name
+// @desc    Register user
+// @route   POST /api/auth/signup
+// @access  Public
+const signup = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide all required fields' 
+      });
     }
-   });
- 
-  }catch(err){
- 
-   res.status(500).json(err);
- 
+    
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User already exists with this email' 
+      });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || 'customer'
+    });
+    
+    await user.save();
+    
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '7d' } // Changed to 7 days for better UX
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during signup' 
+    });
   }
- 
- };
-
-
-// =====================
-// REFRESH TOKEN
-// =====================
-
-exports.refreshToken = (req,res)=>{
-
- const token = req.cookies.refreshToken;
-
- if(!token){
-  return res.status(401).json({message:"No refresh token"});
- }
-
- try{
-
- const decoded = jwt.verify(
-  token,
-  process.env.JWT_REFRESH_SECRET
- );
-
- const newAccessToken = jwt.sign(
-  {id:decoded.id},
-  process.env.JWT_SECRET,
-  {expiresIn:"15m"}
- );
-
- res.json({token:newAccessToken});
-
- }catch(err){
-  res.status(403).json({message:"Invalid refresh token"});
- }
-
 };
 
-
-
-// =====================
-// LOGOUT
-// =====================
-
-exports.logout = (req,res)=>{
-
- res.clearCookie("refreshToken");
-
- res.json({message:"Logged out successfully"});
-
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide email and password' 
+      });
+    }
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials' 
+      });
+    }
+    
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials' 
+      });
+    }
+    
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '7d' }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during login' 
+    });
+  }
 };
 
-
-
-// =====================
-// FORGOT PASSWORD
-// =====================
-
-exports.forgotPassword = async (req,res)=>{
-
-  try{
- 
-   const {email,newPassword} = req.body;
- 
-   const user = await User.findOne({email});
- 
-   if(!user){
-    return res.status(404).json({
-     message:"User not found"
+// @desc    Get current user
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json({
+      success: true,
+      user
     });
-   }
- 
-   if(newPassword.length < 6){
-    return res.status(400).json({
-     message:"Password must be at least 6 characters"
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
     });
-   }
- 
-   const hashed = await bcrypt.hash(newPassword,10);
- 
-   user.password = hashed;
- 
-   await user.save();
- 
-   res.json({
-    message:"Password updated successfully"
-   });
- 
-  }catch(err){
-   res.status(500).json(err);
   }
- 
- };
+};
+
+module.exports = { signup, login, getMe };

@@ -1,15 +1,21 @@
-module.exports = (role) => {
-
+const roleMiddleware = (allowedRoles) => {
     return (req, res, next) => {
-   
-     if (req.user.role !== role) {
-      return res.status(403).json({
-       message: "Unauthorized access"
-      });
-     }
-   
-     next();
-   
+      if (!req.user) {
+        return res.status(401).json({ 
+          success: false,
+          message: 'Authentication required' 
+        });
+      }
+      
+      if (!allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ 
+          success: false,
+          message: `Access denied. ${allowedRoles.join(' or ')} role required.` 
+        });
+      }
+      
+      next();
     };
-   
-   };
+  };
+  
+  module.exports = roleMiddleware;
